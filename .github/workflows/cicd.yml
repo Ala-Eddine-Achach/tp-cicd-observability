@@ -1,0 +1,80 @@
+name: CI/CD Pipeline
+
+# Quand est-ce que ce pipeline se déclenche ?
+on:
+  push:
+    branches: [ main ]  # À chaque push sur la branche main
+  pull_request:
+    branches: [ main ]
+
+# Variables d'environnement
+env:
+  NODE_VERSION: '18.x'
+
+jobs:
+  # JOB 1 : Build et Test
+  build-and-test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    # Étape 1 : Récupérer le code
+    - name: 📥 Checkout code
+      uses: actions/checkout@v3
+    
+    # Étape 2 : Installer Node.js
+    - name: 🟢 Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+    
+    # Étape 3 : Installer les dépendances
+    - name: 📦 Install dependencies
+      run: npm install
+    
+    # Étape 4 : Lancer les tests
+    - name: 🧪 Run tests
+      run: npm test
+    
+    # Étape 5 : Construire l'image Docker
+    - name: 🐳 Build Docker image
+      run: docker build -t tp-cicd-app:${{ github.sha }} .
+    
+    # Étape 6 : Sauvegarder les fichiers pour le déploiement
+    - name: 📤 Upload artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: node-app
+        path: |
+          .
+          !node_modules
+          !.git
+
+  # JOB 2 : Déploiement (seulement si build OK)
+  deploy:
+    needs: build-and-test  # Attend que build-and-test soit terminé
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'  # Seulement sur main
+    
+    steps:
+    # Étape 1 : Télécharger les fichiers
+    - name: 📥 Download artifact
+      uses: actions/download-artifact@v3
+      with:
+        name: node-app
+    
+    # Étape 2 : Se connecter à Azure
+    - name: 🔐 Azure Login
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+    
+    # Étape 3 : Déployer sur Azure App Service
+    - name: 🚀 Deploy to Azure App Service
+      uses: azure/webapps-deploy@v2
+      with:
+        app-name: ${{ secrets.AZURE_WEBAPP_NAME }}
+        package: .
+    
+    # Étape 4 : Se déconnecter d'Azure
+    - name: 🔓 Azure Logout
+      run: az logout
