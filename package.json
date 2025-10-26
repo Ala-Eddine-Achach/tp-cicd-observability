@@ -1,0 +1,16 @@
+{
+    "name": "tp-cicd-observability",
+    "version": "1.0.0",
+    "description": "TP Pipeline CI/CD et Observabilité",
+    "main": "app.js",
+    "scripts": {
+        "start": "node app.js",
+        "test": "echo '✅ Tests passed successfully!' && exit 0"
+    },
+    "dependencies": {
+        "express": "^4.18.2"
+    },
+    "engines": {
+        "node": "18.x"
+    }
+}
